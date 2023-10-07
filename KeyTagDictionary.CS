@@ -15,11 +15,7 @@ namespace VINE
 		public Dictionary<string, List<string>> IdentityGroup = new Dictionary<string, List<string>>();
 
 		public KeyTagDictionary ( )
-		{
-			this . KeyTags ( "year" , "2023" , "2022" , "2021" );
-			this . KeyTags ( "name" , "nuke" );
-			Console . WriteLine ( JsonSerializer . Serialize ( this . Tags ( "year" ) ) );
-		}
+		{}
 
 		public BigInteger Identify ( string Key )
 		{
