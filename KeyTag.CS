@@ -1,7 +1,7 @@
 using System.Dynamic;
 using System.Numerics;
 
-class KeyTag : DynamicObject{
+public class KeyTag : DynamicObject {
     private static KeyTag? entity{get;set;}=null;
     private BigInteger id{get;set;}=BigInteger.MinusOne;
     private string key{get;set;}=string.Empty;
@@ -32,14 +32,17 @@ class KeyTag : DynamicObject{
         get{return this.tag;}
         set{this.tag=value;}
     }
-    public string[] Keys(){
-        return this.keys.Values.Where(set=>set.Key.GetType().Equals(typeof(string))&&!set.Tag.GetType().Equals(typeof(KeyTag))).Select(t=>t.Key).Cast<string>().ToArray();
+    public KeyTag[] Keys(){
+        return this.keys.Values.Where(set=>set.Key.GetType().Equals(typeof(string))&&!set.Tag.GetType().Equals(typeof(KeyTag))).Select(t=>t).Cast<KeyTag>().ToArray();
+    }
+    public string[] Tags(string Key){
+        return ((dynamic)this.keys.Values.Where(set=>set.Key.ToString()==key)).Tags();
     }
     public string[] Tags(){
         return this.keys.Values.Where(set=>set.Key.GetType().Equals(typeof(string))&&!set.Tag.GetType().Equals(typeof(KeyTag))).Select(t=>t.Tag.ToString()).Cast<string>().ToArray();
     }
     public dynamic[] KeyTags(){
-        return this.keys.Values.Where(set=>set.Tag.GetType().Equals(typeof(KeyTag))).ToArray();
+        return this.keys.Values.Where(set=>set.Tag.GetType().Equals(typeof(KeyTag))||set.Key.GetType().Equals(typeof(KeyTag))).ToArray();
     }
     public override string ToString()
     {
@@ -47,6 +50,10 @@ class KeyTag : DynamicObject{
             return this.Tag.ToString();
         }
         return "\0";
+    }
+    public static string ToJSON(KeyTag value)
+    {
+        return value.ToJSON();
     }
     public override bool TryGetMember(GetMemberBinder binder, out dynamic? result)
     {
@@ -99,5 +106,43 @@ class KeyTag : DynamicObject{
             }else{tags[keyTag.Key].Add(value.Id);}
         }
         return true;
+    }
+}
+
+public interface IKeyTag
+{
+    // Any class that implements IMyInterface must define a method
+    // that matches the following signature.
+    string ToJSON();
+}
+
+public static class KeyTagExtensions
+{
+    public static string ToJSON(this KeyTag value)
+    {
+        string keySetValue = string.Empty;
+        dynamic[] Keys = value.Keys();
+        foreach(dynamic Key in Keys)
+        {
+            dynamic[] keys= Key.Keys();
+            keySetValue += ($"\"{Key.Key}\":{{\"{string.Join(",", Key.ToString())}\"}},");
+        }
+        dynamic[] KeyTags = value.KeyTags();
+        foreach(dynamic KeyTag in KeyTags)
+        {
+            dynamic[] keys = KeyTag.Keys();
+            dynamic[] keyTags = KeyTag.KeyTags();
+            string keySubSetValue = string.Empty;
+            foreach(dynamic key in keys)
+            {
+                keySubSetValue += ($"\"{key.Key}\":\"{key.ToString()}\",");
+            }
+            foreach(dynamic Key in keyTags.DistinctBy(key=>key.Key))
+            {
+                keySubSetValue += ($"\"{Key.Key}\":[\"{string.Join("\",\"", Key.Tags())}\"],");
+            }
+            keySetValue += ($"\"{KeyTag.Key}\":{{{keySubSetValue.TrimEnd('"',',')}}}");
+        }
+        return $"{{{keySetValue.TrimEnd('"',',')}}}";
     }
 }
