@@ -67,12 +67,6 @@ class KeyTag : DynamicObject{
                 if(entity.Value.Tag.GetType().Equals(typeof(string))){
                     result=entity.Value.ToString();
                     return true;
-                }else{
-                    if(binder.ReturnType.Equals(typeof(string))){
-
-                    }
-                    result=keys[entity.Value.Id];
-                    return true;
                 }
             }else{
                 result = entity.Value.Key;
@@ -85,7 +79,6 @@ class KeyTag : DynamicObject{
     public override bool TrySetMember(SetMemberBinder binder, dynamic? value)
     {
         string name = binder.Name;
-        //test.Test=test.Apple;
         KeyValuePair<BigInteger,dynamic> keyEntity=keys.Where(k=>k.Value.Key.Equals(name)||(value.GetType().Equals(typeof(string))&&k.Value.Key.Equals(value))).FirstOrDefault(new KeyValuePair<BigInteger,dynamic>(BigInteger.MinusOne,null));
         if(keyEntity.Key.Equals(BigInteger.MinusOne)){
             try{
