@@ -86,7 +86,7 @@ public class KeyTag : DynamicObject {
     public override bool TrySetMember(SetMemberBinder binder, dynamic? value)
     {
         string name = binder.Name;
-        KeyValuePair<BigInteger,dynamic> keyEntity=keys.Where(k=>k.Value.Key.Equals(name)||(value.GetType().Equals(typeof(string))&&k.Value.Key.Equals(value))).FirstOrDefault(new KeyValuePair<BigInteger,dynamic>(BigInteger.MinusOne,null));
+        KeyValuePair<BigInteger,dynamic> keyEntity=keys.Where(k=>k.Value.Key.Equals(name)||(k.Value.Key.Equals(value))).FirstOrDefault(new KeyValuePair<BigInteger,dynamic>(BigInteger.MinusOne,null));
         if(keyEntity.Key.Equals(BigInteger.MinusOne)){
             try{
                 dynamic keyTags = new KeyTag(){Id=Increment(),Key=name,Tag=value};
@@ -94,8 +94,17 @@ public class KeyTag : DynamicObject {
                 keyEntity=new KeyValuePair<BigInteger,dynamic>(keyTags.Id,keyTags);
             }catch{}
         }
-        if(value is not null && value.GetType().Equals(typeof(string)) is false)
+        if(value is not null && value.GetType().Equals(typeof(string)) is false && value.GetType().Equals(typeof(DynamicInteger<BigInteger>)) is false)
         {
+            try{
+                try {
+                    BigInteger bigInteger = new BigInteger(value);
+                    return true;
+                } catch{}
+                if(value.GetType().Equals(typeof(System.ValueTuple<BigInteger,BigInteger>))){
+                    return true;
+                }
+            }catch{}
             KeyValuePair<BigInteger,List<BigInteger>>keyTag=tags.Where(t=>t.Key.Equals(keyEntity.Value.Id)).FirstOrDefault(new KeyValuePair<BigInteger,List<BigInteger>>(BigInteger.MinusOne,new(){keyEntity.Value.Id,value.Id}));
             if(keyTag.Key.Equals(BigInteger.MinusOne)){
                 try{
@@ -118,24 +127,50 @@ public static class KeyTagExtensions
         foreach(dynamic Key in Keys)
         {
             dynamic[] keys= Key.Keys();
-            keySetValue += ($"\"{Key.Key}\":{{\"{string.Join(",", Key.ToString())}\"}},");
+            string keySubSetValue = "";
+            if(Key.Tag.GetType().Equals(typeof(System.ValueTuple<BigInteger,BigInteger>))){
+                try{
+                    keySubSetValue += $"{string.Join((char)KeyTagSymbol.Separate, string.Join((char)KeyTagSymbol.Fractionate, Key.Tag.Item1, Key.Tag.Item2))}";
+                }catch{}
+            }else{
+                if(Key.Tag.GetType().Equals(typeof(string)))
+                {
+                    keySubSetValue += $"{(char)KeyTagSymbol.OpenString}{string.Join((char)KeyTagSymbol.Separate, Key.Tag.ToString())}{(char)KeyTagSymbol.CloseString}";
+                } else {
+                    keySubSetValue += $"{string.Join((char)KeyTagSymbol.Separate, Key.Tag.ToString())}";
+                }
+            }
+            keySetValue += $"{(char)KeyTagSymbol.OpenString}{Key.Key}{(char)KeyTagSymbol.CloseString}{(char)KeyTagSymbol.Equate}{keySubSetValue}{(char)KeyTagSymbol.Separate}";
         }
         dynamic[] KeyTags = value.KeyTags();
-        foreach(dynamic KeyTag in KeyTags)
+        foreach(dynamic keyTag in KeyTags)
         {
-            dynamic[] keys = KeyTag.Keys();
-            dynamic[] keyTags = KeyTag.KeyTags();
+            dynamic[] keys = keyTag.Keys();
+            dynamic[] keyTags = keyTag.KeyTags();
             string keySubSetValue = string.Empty;
             foreach(dynamic key in keys)
             {
-                keySubSetValue += ($"\"{key.Key}\":\"{key.ToString()}\",");
+                keySubSetValue += ($"{(char)KeyTagSymbol.OpenString}{key.Key}{(char)KeyTagSymbol.CloseString}{(char)KeyTagSymbol.Equate}{(char)KeyTagSymbol.OpenString}{key.ToString()}{(char)KeyTagSymbol.CloseString}{(char)KeyTagSymbol.Separate}");
             }
             foreach(dynamic Key in keyTags.DistinctBy(key=>key.Key))
             {
-                keySubSetValue += ($"\"{Key.Key}\":[\"{string.Join("\",\"", Key.Tags())}\"],");
+                keySubSetValue += $"{(char)KeyTagSymbol.OpenString}{Key.Key}{(char)KeyTagSymbol.CloseString}{(char)KeyTagSymbol.Equate}{KeyTag.ToJSON(Key)}{(char)KeyTagSymbol.Separate}";
             }
-            keySetValue += ($"\"{KeyTag.Key}\":{{{keySubSetValue.TrimEnd('"',',')}}}");
+            keySetValue += ($"{(char)KeyTagSymbol.OpenString}{keyTag.Key}{(char)KeyTagSymbol.CloseString}{(char)KeyTagSymbol.Equate}{(char)KeyTagSymbol.OpenObject}{keySubSetValue.TrimEnd((char)KeyTagSymbol.Separate,(char)KeyTagSymbol.CloseString)}{(char)KeyTagSymbol.CloseObject}");
         }
-        return $"{{{keySetValue.TrimEnd('"',',')}}}";
+        return $"{(char)KeyTagSymbol.OpenObject}{keySetValue.TrimEnd((char)KeyTagSymbol.Separate)}{(char)KeyTagSymbol.CloseObject}";
     }
+}
+
+public enum KeyTagSymbol : int
+{
+    OpenString='"',
+    CloseString='"',
+    Fractionate='.',
+    Equate=':',
+    Separate=',',
+    OpenObject='{',
+    CloseObject='}',
+    OpenArray='[',
+    CloseArray=']'
 }
