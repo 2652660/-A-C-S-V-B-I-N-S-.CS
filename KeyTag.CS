@@ -109,13 +109,6 @@ public class KeyTag : DynamicObject {
     }
 }
 
-public interface IKeyTag
-{
-    // Any class that implements IMyInterface must define a method
-    // that matches the following signature.
-    string ToJSON();
-}
-
 public static class KeyTagExtensions
 {
     public static string ToJSON(this KeyTag value)
